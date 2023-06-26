@@ -1,0 +1,30 @@
+# Wind Turbine Positions (x,y)
+2, 2
+4, 4
+6, 6
+8, 8
+10, 10
+
+# Model Parameters (Turbulence Intensity, Turbine Hub Height (m)):
+0.1, 60
+
+## Weibull Distribution Check: False for one wind direction, True for multiple
+## If Weibull Distribution Check is False, Wind Speed is the average wind speed. Else Value
+## of None if there are multiple wind directions
+# Weibull Distribution Check, Wind Speed (m/s):
+True, None
+
+## If Weibull Distribution Check is False Probaility of Wind Directions is [1],
+## else it is a list of all the wind direction frequecies
+## If Weibull Distribution Check is True  a list of Scale parameters
+## for wind directions, else value is None
+## If Weibull Distribution Check is True a list of Shape parameters
+## for wind directions, else value is None
+# Probability of Wind Directions (%), Weibull Scale Parameter(s), Weibull Shape Parameter(s):
+0.20, 9.176929, 2.392578
+0.25, 9.782334, 2.447266
+0.35, 9.531809, 2.412109
+0.25, 9.909545, 2.591797
+
+
+
