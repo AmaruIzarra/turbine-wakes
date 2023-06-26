@@ -5,7 +5,7 @@ import numpy as np
 class InputData():
     """This class takes a file and extracts the data point for the system
 
-    Default wind direction is 270
+    Default wind direction is 270 (west)
     """
 
     def __init__(self, filename):
