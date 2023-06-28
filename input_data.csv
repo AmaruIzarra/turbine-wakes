@@ -1,9 +1,12 @@
 # Wind Turbine Positions (x, y)
+100, 300
 200, 200
+200, 400
 300, 300
+300, 100
+300, 500
+400, 200
 400, 400
-500, 500
-600, 600
 
 # Model Parameters (Turbulence Intensity, Turbine Hub Height (m)):
 0.1, 60
