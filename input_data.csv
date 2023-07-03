@@ -8,8 +8,8 @@
 400, 200
 400, 400
 
-# Model Parameters (Turbulence Intensity, Turbine Hub Height (m)):
-0.1, 60
+# Model Parameters (Turbulence Intensity, Turbine Hub Height (m), Turbine Diameter (m):
+0.1, 60, 80
 
 ## Weibull Distribution Check: False for one wind direction, True for multiple
 ## If Weibull Distribution Check is False, Wind Speed is the average wind speed. Else Value

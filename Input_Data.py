@@ -15,8 +15,8 @@ class InputData():
 
         self.initial_positions = np.array(get_data_float(self.reader)).T
 
-        temp_data = get_data_float(self.reader)
-        self.ti, self.hub_height = temp_data[0][0], temp_data[0][1]
+        temp_data = get_data_3_float(self.reader)
+        self.ti, self.hub_height, self.t_diameter = temp_data[0][0], temp_data[0][1], temp_data[0][2]
 
         temp_data = get_data(self.reader)
 
