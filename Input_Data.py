@@ -8,15 +8,25 @@ class InputData():
     Default wind direction is 270 (west)hg
     """
 
-    def __init__(self, filename):
+    def __init__(self, filename, directory_name):
+
+        self.directory = directory_name
 
         self.file = open(filename)
         self.reader = csv.reader(self.file)
 
         self.initial_positions = np.array(get_data_float(self.reader)).T
 
+        temp_data = get_data_4_float(self.reader)
+        self.x_axis, self.y_axis, self.z_axis, self.jump = temp_data[0][0], \
+                                                           temp_data[0][1], \
+                                                           temp_data[0][2], \
+                                                           temp_data[0][3]
+
         temp_data = get_data_3_float(self.reader)
-        self.ti, self.hub_height, self.t_diameter = temp_data[0][0], temp_data[0][1], temp_data[0][2]
+        self.ti, self.hub_height, self.t_diameter = temp_data[0][0], \
+                                                    temp_data[0][1], \
+                                                    temp_data[0][2]
 
         temp_data = get_data(self.reader)
 
@@ -77,5 +87,17 @@ def get_data_3_float(reader):
             break
         if not line[0].startswith('#'):
             data.append([float(line[0]), float(line[1]), float(line[2])])
+
+    return data
+
+
+def get_data_4_float(reader):
+    data = []
+    for line in reader:
+        if not line:
+            break
+        if not line[0].startswith('#'):
+            data.append([float(line[0]), float(line[1]), float(line[2]),
+                         float(line[3])])
 
     return data

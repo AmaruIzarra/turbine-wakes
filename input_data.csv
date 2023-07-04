@@ -1,4 +1,4 @@
-# Wind Turbine Positions (x, y)
+# Wind Turbine Positions (x(m), y(m))
 100, 300
 200, 200
 200, 400
@@ -7,6 +7,9 @@
 300, 500
 400, 200
 400, 400
+
+# Grid parameters (x-axis(m), y-axis(m), z-axis(m), z_jump((creates a new z-slice every given number of meters))
+700,700,70,1
 
 # Model Parameters (Turbulence Intensity, Turbine Hub Height (m), Turbine Diameter (m):
 0.1, 60, 80
