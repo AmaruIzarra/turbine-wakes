@@ -1,0 +1,20 @@
+{
+	"wind_theta": [0.0],
+	"z_hub" : 60,
+	"d_rot" : 40,
+	"rel_thickness" : 0.05,
+	"n_turbines" : 3,
+	"z0" : 0.3,
+	"T" : 0.12,
+	"cw" : 0.9,
+	"farm_size" : 2000,
+	"n_images" : 125,
+	"grid_resolution" : 400,
+	"dpi" : 100,
+	"u_inf" : 13.0,
+	"img_size" : 4,
+	"seed" : 13,
+	"n_turbine_range" : [3,15],
+	"u_inf_range" : [5.0, 15.0],
+	"cmap" : "gray"
+}
