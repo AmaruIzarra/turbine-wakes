@@ -235,8 +235,9 @@ def calculate_flow_field(
         r_rot = d_rot[i] / 2.0
 
         ri = xt[i]
-        x0=x0
-        c1=(Deff/2)**(5/2)*(105/(2*pi))**(-1/2)*(cw*F*x0)**(-5/6)
+        x0 = x0
+
+        c1 = (Deff/2)**(5/2)*(105/(2*pi))**(-1/2)*(cw*F*x0)**(-5/6)
 
         # loop over plot points
         for j in np.arange(0, xyplot.shape[0]):
@@ -251,29 +252,31 @@ def calculate_flow_field(
             # rij_hat = rij / np.linalg.norm(rij)
             dij = np.linalg.norm(rij)
 
-
-
-
-
             if ri[0]<rj[0]:
 
                 r0=(35/(2*math.pi))**(1/5)*(3*c1**2)**(1/5)*(cw*F*(rj[0]-ri[0]+x0))**(1/3)
                 # print('r0=',r0)
+                # area above the centre line
                 if(ri[1]<=rj[1]<ri[1]+r0):
                     #print(rj)
+                    # velocity in x-direction
                     u_wake[i, j]=u_inf+(-1*u_inf/9*(cw*F*(rj[0]-ri[0]+x0)**(-2))**(1/3) \
                                         *((rj[1]-ri[1])**(3/2)*(3*c1**2*cw*F*(rj[0]-ri[0]+x0))**(-1/2)-(35/(2*pi))**(3/10) \
                                           *(3*c1**2)**(-1/5))**2)
                     r=rj[1]-ri[1]
+                    # velocity in y-direction
                     v_wake[i, j]=-1*((u_inf/3)*(cw*F)**(1/3)*(rj[0]-ri[0]+x0)**(-5/3)*r*((r**(3/2)*(3*c1**2*cw*F*(rj[0]-ri[0]+x0))**(-1/2) \
                                                                                           -(35/(2*pi))**(3/10)*(3*c1**2)**(-1/5))**2))
+                # area below centre line
                 if(ri[1]>rj[1]>ri[1]-r0):
                     # print(rj[0])
                     r=ri[1]-rj[1]
                     #u_wake[i, j]=u0-(-u0/9*(cw*F*(rj[0]-ri[0]+)**(-2))**(1/3)*((ri[1]-rj[1])**(3/2)*(3*c1**2*cw*F*(rj[0]-ri[0]+x0))**(-1/2)-(35/(2*pi))**(3/10)*(3*c1**2)**(-1/5))**2)
+                    # velocity in x-direction
                     u_wake[i, j]=u_inf+(-1*u_inf/9*(cw*F*(rj[0]-ri[0]+x0)**(-2))**(1/3) \
                                         *((ri[1]-rj[1])**(3/2)*(3*c1**2*cw*F*(rj[0]-ri[0]+x0))**(-1/2)-(35/(2*pi))**(3/10) \
                                           *(3*c1**2)**(-1/5))**2)
+                    # velocity in y-direction
                     v_wake[i, j]=((u_inf/3)*(cw*F)**(1/3)*(rj[0]-ri[0]+x0)**(-5/3)*r*((r**(3/2)*(3*c1**2*cw*F*(rj[0]-ri[0]+x0))**(-1/2) \
                                                                                        -(35/(2*pi))**(3/10)*(3*c1**2)**(-1/5))**2))
                     #print(u_wake[i, j])
@@ -695,7 +698,6 @@ def main(params):
     `params` is a python dict, created from parsing CLI arguments
     """
 
-    print(params)
 
     if params["config_file"] is None:
         config_file = params["base_name"] + ".cfg"

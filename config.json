@@ -3,7 +3,7 @@
 	"z_hub" : 60,
 	"d_rot" : 40,
 	"rel_thickness" : 0.05,
-	"n_turbines" : 3,
+	"n_turbines" : 5,
 	"z0" : 0.3,
 	"T" : 0.12,
 	"cw" : 0.9,
@@ -16,5 +16,6 @@
 	"seed" : 13,
 	"n_turbine_range" : [3,15],
 	"u_inf_range" : [5.0, 15.0],
-	"cmap" : "gray"
+	"cmap" : "gray",
+	"cmap_range": [0.0, 1.0]
 }

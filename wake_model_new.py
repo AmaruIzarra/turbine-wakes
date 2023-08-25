@@ -1,25 +1,19 @@
-import io
 import json
 import pickle
 import random
-import time
-import cv2
-import matplotlib as mpl
-import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 
 import numpy as np
 import pandas as pd
-import PIL.Image
-import scipy.stats.qmc as qmc
-from PIL import Image, ImageOps, ImageStat
-from scipy.stats.qmc import LatinHypercube
+from PIL import Image
 from shapely.affinity import rotate, translate
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Polygon
 from tqdm import tqdm
-from IPython import embed
 from math import floor
-import os
+from turbine_builder import Turbines
+from py_wake_new_wake import MyJensen
+from py_wake.site._site import UniformSite
+
 
 '''
 Controls whether a turbine is presented by scaled lines
@@ -199,7 +193,15 @@ def calculate_flow_field(
     x_turbines: real, Cartesian coordinates of the turbines
     """
 
-    # if given a flattened vector of turbine coordinates, convert to a matrix with x,y as columns
+    xplot = xplot
+    yplot = yplot
+
+
+    name = "myTurbine"
+    my_turbines = Turbines(name, d_rot, z_hub, u_inf).get_wind_turbines()
+    my_site = UniformSite(ti=1/np.log(z_hub/z0), ws=u_inf)
+
+    # getting the x, y - coordinates of the turbines
     xt = x_turbines
     if xt.ndim == 1:
         nt = xt.shape[0] / 2
@@ -207,81 +209,13 @@ def calculate_flow_field(
     else:
         nt = xt.shape[0]
 
-    # broadcast rotor diameter and hub height if the given value is a scalar
-    if z_hub is not np.array:
-        z_hub = [z_hub] * nt
-    if d_rot is not np.array:
-        d_rot = [d_rot] * nt
+    deficit_model = MyJensen(my_site, my_turbines[0])
+    u_eff = deficit_model.calculate_new_wake_model(
+        my_site, my_turbines[0], xt[0], xt[1],np.linspace(
+            0,farm_size, grid_resolution), np.linspace(
+            0,farm_size, grid_resolution), d_rot, u_inf)
 
-    # build matrix of plot points
-    # +1 and slicing are needed so turbines are placed at lower left corners
-    # of each pixel
-    if xplot is None:
-        x_range = np.linspace(0.0, farm_size, grid_resolution+1)[:-1]
-        y_range = np.linspace(0.0, farm_size, grid_resolution+1)[:-1]
-        xplot, yplot = np.meshgrid(x_range, y_range)
-
-    # create matrix of plot points
-    xyplot = np.transpose(np.vstack((xplot.ravel(), yplot.ravel())))
-
-
-    # auxiliary wake-indicator matrix
-    wake_indicator = np.zeros((nt, xyplot.shape[0]))
-    # initialize wake matrix
-    u_wake = u_inf * np.ones((nt, xyplot.shape[0]))
-
-    # unit vector in wind direction
-
-
-    # length of wake
-    farm_area = farm_size * np.ones((1, 2))
-    wake_length = np.linalg.norm(farm_area)
-
-    # loop over turbines
-    for i in np.arange(0, nt):
-        # turbine-specific parameters
-        zi = z_hub[i]
-        r_rot = d_rot[i] / 2.0
-
-        alpha = 0.5 / np.log(zi / z0)
-        wake_angle = np.arctan(alpha)
-        # position vector
-        ri = xt[i]
-
-
-        # create polygon defining the wake
-        turbine = create_turbine_polygon(ri, r_rot, wake_angle, wake_length, wind_theta)
-
-
-        # loop over plot points
-        for j in np.arange(0, xyplot.shape[0]):
-            # position vector of this point
-            rj = xyplot[j]
-
-
-            # relative position between turbine and point
-            rij = rj - ri
-
-            dij = np.linalg.norm(rij)
-
-
-            # Is this point inside the wake?
-            if turbine.contains(Point(*rj)):
-                wake_indicator[i, j] = 1
-                u_wake[i, j] = u_inf * (
-                        1 - (2 / 3) * ((r_rot) / (r_rot + alpha * dij)) ** 2
-                )
-
-    # aggregate wake effects on each point
-
-    u_eff = u_inf * (1 - np.sqrt(np.sum(np.square(1 - u_wake / u_inf), axis=0)))
-
-    u_eff = np.reshape(u_eff, xplot.shape)
-
-
-
-
-    u_norm = u_eff / u_inf
+    u_norm = u_eff[0] / u_inf
 
     return xplot, yplot, u_eff, u_norm
 
@@ -967,266 +901,266 @@ def main(params):
         xt_cases,
         u_inf_cases,
         wind_theta_cases,
-        farm_size=farm_size,
-        z_hub=z_hub,
+        farm_size=params["farm_size"],
+        z_hub=params['z_hub'],
         d_rot=d_rot,
-        z0=z0,
-        rel_thickness=rel_thickness,
+        z0=params["z0"],
+        rel_thickness=params["rel_thickness"],
         base_name=params["base_name"],
         dpi=params["dpi"],
         cmap=params["cmap"],
         vmin=params['cmap_range'][0],
         vmax=params['cmap_range'][1],
         img_size=img_size,
-        grid_resolution=grid_resolution,
+        grid_resolution= params["grid_resolution"],
     )
     return
 
 
 
-# if __name__ == "__main__":
-    # import argparse
-    #
-    # # DEFAULT Values, to be overriden with a config file
-    # # wind speed
-    # u_inf = 15
-    # # wind direction (vector points in direction of wind)
-    # wind_theta = (
-    #     0.0  # Wind flows toward East (i.e. a west wind, b/c it comes from the west)
-    # )
-    # # turbine hub height
-    # z_hub = 60
-    # # rotor diameter
-    # d_rot = 40
-    # # thickness of the rotor relative to its diameter
-    # rel_thickness = 0.05
-    # # number of turbines
-    # n_turbines = 20
-    # # roughness length
-    # z0 = 0.3
-    # # farm size
-    # # TODO: Define as multiple of d_rot
-    # farm_size = 2000
-    # # number of images
-    # n_images = 128
-    # # resolution for plotting (number of points per direction)
-    #
-    # grid_resolution = 1000  # means one point each 5 m based on size of 2000 m
-    # # grid_resolution = 800 # means one point each 2.5 m based on size of 2000 m
-    # # image resolution
-    # dpi = 100
-    # # resulting image size in INCHES (works out to 4 x 4)
-    # img_size = grid_resolution / dpi
-    # # random seed
-    # # seed = 13     # preferred during dev/debugging so results are repeatable
-    # seed = 13  # preferred b/c they should default to being random
-    # # MIN/MAX limits for randomized cases
-    # n_turbines_range = [10, 30]
-    # u_inf_range = [5, 15.0]  # based on cut-in and rated speeds found in Google (typical cut=in is 2.5, but good sites have 6.0 avg speed
-    # wind_theta_range = [0, 0]
-    # # colormap for the images
-    # cmap = "gray"
-    # # limits of colormap: WIDER than u_inf_range
-    # # so that speeds below min(u_inf_range) can still
-    # # be represented (otherwise HIGH errors at low speeds)
-    # # there shouldn't be any speeds above u_inf_max,
-    # # at least on 2D simulations
-    # cmap_range = [0.0, 1.0]
-    #
-    # # Create the parser
-    # parser = argparse.ArgumentParser(
-    #     description="Generate images of turbine layouts and corresponding wake flow fields",
-    #     add_help=True,
-    # )
-    #
-    # # Add the arguments
-    # parser.add_argument(
-    #     "--n_images",
-    #     metavar="Ni",
-    #     type=int,
-    #     help="Number of images to generate",
-    #     default=n_images,
-    # )
-    # parser.add_argument(
-    #     "--n_turbines",
-    #     metavar="Nt",
-    #     type=int,
-    #     help="Number of turbines in the wind farm layout",
-    #     default=n_turbines,
-    # )
-    # parser.add_argument(
-    #     "--base_name",
-    #     metavar="NAME",
-    #     type=str,
-    #     help="Common part of the image filenames. \nThe image number will be added as suffix to each image name\nDefaults to a timestamp",
-    #     default='test',
-    # )
-    #
-    # parser.add_argument(
-    #     "--u_inf",
-    #     metavar="U",
-    #     type=float,
-    #     help="Wind speed in [m/s]",
-    #     default=u_inf,
-    # )
-    #
-    # parser.add_argument(
-    #     "--wind_theta",
-    #     metavar="Theta",
-    #     type=float,
-    #     help='Wind direction in [deg]. \nA NE wind, meaning the wind "comes" from the north-east, would have a direction of 180 + 45 = 225 degrees',
-    #     default=0.0,
-    # )
-    #
-    # parser.add_argument(
-    #     "--d_rot",
-    #     metavar="Dt",
-    #     type=float,
-    #     help="Rotor diameter in [m]",
-    #     default=d_rot,
-    # )
-    #
-    # parser.add_argument(
-    #     "--t_rot",
-    #     metavar="t",
-    #     type=float,
-    #     help="Relative rotor thickness. Defaults to d_rot/20",
-    #     default=rel_thickness,
-    # )
-    #
-    # parser.add_argument(
-    #     "--z_hub",
-    #     metavar="Ht",
-    #     type=float,
-    #     help="Hub height in [m]",
-    #     default=z_hub,
-    # )
-    #
-    # parser.add_argument(
-    #     "--z0",
-    #     metavar="Z0",
-    #     type=float,
-    #     help="Roughness length of the terrain in [m]",
-    #     default=z0,
-    # )
-    #
-    # parser.add_argument(
-    #     "--farm_size",
-    #     metavar="LENGTH",
-    #     type=float,
-    #     help="Side length in [m] of the wind farm terrain. The wind farm is assumed to be a square with the provided size",
-    #     default=farm_size,
-    # )
-    #
-    # parser.add_argument(
-    #     "--grid_resolution",
-    #     metavar="NPOINTS",
-    #     type=int,
-    #     help="Resolution of meshgrid used to create the images. Note that this is different from the image resolution",
-    #     default=grid_resolution,
-    # )
-    #
-    # parser.add_argument(
-    #     "--dpi",
-    #     metavar="DPI",
-    #     type=int,
-    #     help="Resolution (DPI) of created layout and flow field images",
-    #     default=dpi,
-    # )
-    #
-    # parser.add_argument(
-    #     "--cmap",
-    #     metavar="CMAP",
-    #     type=str,
-    #     help="Colormap used to generate images. Defaults to 'jet'",
-    #     default=cmap,
-    # )
-    #
-    # parser.add_argument(
-    #     "--u_inf_range",
-    #     metavar="X",
-    #     type=float,
-    #     nargs=2,
-    #     help="Min and max values of wind speed used to generate cases. Defaults to 5.0 to 15 m/s, consistent with avg wind speeds in wind farm sites and typical cut-off of wind turbines",
-    #     default=u_inf_range,
-    # )
-    # parser.add_argument(
-    #     "--cmap_range",
-    #     metavar="CMAP",
-    #     type=float,
-    #     nargs=2,
-    #     help="Min and max values of wind speed used to define the colormap.",
-    #     default=u_inf_range,
-    # )
-    #
-    # parser.add_argument(
-    #     "--random_seed",
-    #     metavar="SEED",
-    #     type=int,
-    #     help="Seed for the random number generator",
-    #     default=seed,
-    # )
-    #
-    # parser.add_argument(
-    #     "--save_config",
-    #     action="store_true",
-    #     help="Flag indicating whether to save all parameter values to a JSON file. Requires --config_file. Cannot be used with --load-config",
-    #     default=False,
-    # )
-    #
-    # parser.add_argument(
-    #     "--load_config",
-    #     action="store_true",
-    #     help="Flag indicating whether to load all parameter values from a JSON file. Requires --config_file. Cannot be used with --save-config",
-    #     default=False,
-    # )
-    #
-    # parser.add_argument(
-    #     "--config_file",
-    #     metavar="FILE",
-    #     type=str,
-    #     help="Filename to either load or save configuration in JSON format. Defaults to a timestamp with a .cfg extension",
-    #     default=None,
-    # )
-    #
-    # parser.add_argument(
-    #     "--layout_file",
-    #     metavar="FILE",
-    #     type=str,
-    #     help="Filename with turbine coordinates. Must be a pickle file containing a list of numpy arrays, each array of size [nt x 2])",
-    #     #default='D:/Research/CFD_data/CFD_data/CFD_128_layouts-20230329T174354Z/test_layouts.pkl',
-    #     default=None
-    # )
-    #
-    # parser.add_argument(
-    #     "--randomize_all",
-    #     action="store_true",
-    #     help="Flag indicating whether to randomize the number of turbines, wind speed and wind direction. Hub height is not randomized because this is a 2D model. \n Note that this overrides any conflicting command-line options",
-    #     default=False,
-    # )
-    #
-    # parser.add_argument(
-    #     "--randomize_nt",
-    #     action="store_true",
-    #     help="Flag indicating whether to randomize the number of turbines",
-    #     default=False,
-    # )
-    #
-    # parser.add_argument(
-    #     "--randomize_u",
-    #     action="store_true",
-    #     help="Flag indicating whether to randomize the wind speed",
-    #     default=False,
-    # )
-    #
-    # parser.add_argument(
-    #     "--randomize_theta",
-    #     action="store_true",
-    #     help="Flag indicating whether to randomize the wind direction",
-    #     default=False,
-    # )
-    #
-    # config = parser.parse_args()
-    #
-    # # using vars() converts the NameSpace object (config) into a dict
-    # main(vars(config))
+if __name__ == "__main__":
+    import argparse
+
+    # DEFAULT Values, to be overriden with a config file
+    # wind speed
+    u_inf = 15
+    # wind direction (vector points in direction of wind)
+    wind_theta = (
+        0.0  # Wind flows toward East (i.e. a west wind, b/c it comes from the west)
+    )
+    # turbine hub height
+    z_hub = 60
+    # rotor diameter
+    d_rot = 40
+    # thickness of the rotor relative to its diameter
+    rel_thickness = 0.05
+    # number of turbines
+    n_turbines = 20
+    # roughness length
+    z0 = 0.3
+    # farm size
+    # TODO: Define as multiple of d_rot
+    farm_size = 2000
+    # number of images
+    n_images = 128
+    # resolution for plotting (number of points per direction)
+
+    grid_resolution = 1000  # means one point each 5 m based on size of 2000 m
+    # grid_resolution = 800 # means one point each 2.5 m based on size of 2000 m
+    # image resolution
+    dpi = 100
+    # resulting image size in INCHES (works out to 4 x 4)
+    img_size = grid_resolution / dpi
+    # random seed
+    # seed = 13     # preferred during dev/debugging so results are repeatable
+    seed = 13  # preferred b/c they should default to being random
+    # MIN/MAX limits for randomized cases
+    n_turbines_range = [10, 30]
+    u_inf_range = [5, 15.0]  # based on cut-in and rated speeds found in Google (typical cut=in is 2.5, but good sites have 6.0 avg speed
+    wind_theta_range = [0, 0]
+    # colormap for the images
+    cmap = "gray"
+    # limits of colormap: WIDER than u_inf_range
+    # so that speeds below min(u_inf_range) can still
+    # be represented (otherwise HIGH errors at low speeds)
+    # there shouldn't be any speeds above u_inf_max,
+    # at least on 2D simulations
+    cmap_range = [0.0, 1.0]
+
+    # Create the parser
+    parser = argparse.ArgumentParser(
+        description="Generate images of turbine layouts and corresponding wake flow fields",
+        add_help=True,
+    )
+
+    # Add the arguments
+    parser.add_argument(
+        "--n_images",
+        metavar="Ni",
+        type=int,
+        help="Number of images to generate",
+        default=n_images,
+    )
+    parser.add_argument(
+        "--n_turbines",
+        metavar="Nt",
+        type=int,
+        help="Number of turbines in the wind farm layout",
+        default=n_turbines,
+    )
+    parser.add_argument(
+        "--base_name",
+        metavar="NAME",
+        type=str,
+        help="Common part of the image filenames. \nThe image number will be added as suffix to each image name\nDefaults to a timestamp",
+        default='test',
+    )
+
+    parser.add_argument(
+        "--u_inf",
+        metavar="U",
+        type=float,
+        help="Wind speed in [m/s]",
+        default=u_inf,
+    )
+
+    parser.add_argument(
+        "--wind_theta",
+        metavar="Theta",
+        type=float,
+        help='Wind direction in [deg]. \nA NE wind, meaning the wind "comes" from the north-east, would have a direction of 180 + 45 = 225 degrees',
+        default=0.0,
+    )
+
+    parser.add_argument(
+        "--d_rot",
+        metavar="Dt",
+        type=float,
+        help="Rotor diameter in [m]",
+        default=d_rot,
+    )
+
+    parser.add_argument(
+        "--t_rot",
+        metavar="t",
+        type=float,
+        help="Relative rotor thickness. Defaults to d_rot/20",
+        default=rel_thickness,
+    )
+
+    parser.add_argument(
+        "--z_hub",
+        metavar="Ht",
+        type=float,
+        help="Hub height in [m]",
+        default=z_hub,
+    )
+
+    parser.add_argument(
+        "--z0",
+        metavar="Z0",
+        type=float,
+        help="Roughness length of the terrain in [m]",
+        default=z0,
+    )
+
+    parser.add_argument(
+        "--farm_size",
+        metavar="LENGTH",
+        type=float,
+        help="Side length in [m] of the wind farm terrain. The wind farm is assumed to be a square with the provided size",
+        default=farm_size,
+    )
+
+    parser.add_argument(
+        "--grid_resolution",
+        metavar="NPOINTS",
+        type=int,
+        help="Resolution of meshgrid used to create the images. Note that this is different from the image resolution",
+        default=grid_resolution,
+    )
+
+    parser.add_argument(
+        "--dpi",
+        metavar="DPI",
+        type=int,
+        help="Resolution (DPI) of created layout and flow field images",
+        default=dpi,
+    )
+
+    parser.add_argument(
+        "--cmap",
+        metavar="CMAP",
+        type=str,
+        help="Colormap used to generate images. Defaults to 'jet'",
+        default=cmap,
+    )
+
+    parser.add_argument(
+        "--u_inf_range",
+        metavar="X",
+        type=float,
+        nargs=2,
+        help="Min and max values of wind speed used to generate cases. Defaults to 5.0 to 15 m/s, consistent with avg wind speeds in wind farm sites and typical cut-off of wind turbines",
+        default=u_inf_range,
+    )
+    parser.add_argument(
+        "--cmap_range",
+        metavar="CMAP",
+        type=float,
+        nargs=2,
+        help="Min and max values of wind speed used to define the colormap.",
+        default=u_inf_range,
+    )
+
+    parser.add_argument(
+        "--random_seed",
+        metavar="SEED",
+        type=int,
+        help="Seed for the random number generator",
+        default=seed,
+    )
+
+    parser.add_argument(
+        "--save_config",
+        action="store_true",
+        help="Flag indicating whether to save all parameter values to a JSON file. Requires --config_file. Cannot be used with --load-config",
+        default=False,
+    )
+
+    parser.add_argument(
+        "--load_config",
+        action="store_true",
+        help="Flag indicating whether to load all parameter values from a JSON file. Requires --config_file. Cannot be used with --save-config",
+        default=False,
+    )
+
+    parser.add_argument(
+        "--config_file",
+        metavar="FILE",
+        type=str,
+        help="Filename to either load or save configuration in JSON format. Defaults to a timestamp with a .cfg extension",
+        default=None,
+    )
+
+    parser.add_argument(
+        "--layout_file",
+        metavar="FILE",
+        type=str,
+        help="Filename with turbine coordinates. Must be a pickle file containing a list of numpy arrays, each array of size [nt x 2])",
+        #default='D:/Research/CFD_data/CFD_data/CFD_128_layouts-20230329T174354Z/test_layouts.pkl',
+        default=None
+    )
+
+    parser.add_argument(
+        "--randomize_all",
+        action="store_true",
+        help="Flag indicating whether to randomize the number of turbines, wind speed and wind direction. Hub height is not randomized because this is a 2D model. \n Note that this overrides any conflicting command-line options",
+        default=False,
+    )
+
+    parser.add_argument(
+        "--randomize_nt",
+        action="store_true",
+        help="Flag indicating whether to randomize the number of turbines",
+        default=False,
+    )
+
+    parser.add_argument(
+        "--randomize_u",
+        action="store_true",
+        help="Flag indicating whether to randomize the wind speed",
+        default=False,
+    )
+
+    parser.add_argument(
+        "--randomize_theta",
+        action="store_true",
+        help="Flag indicating whether to randomize the wind direction",
+        default=False,
+    )
+
+    config = parser.parse_args()
+
+    # using vars() converts the NameSpace object (config) into a dict
+    main(vars(config))
