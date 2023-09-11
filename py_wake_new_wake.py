@@ -20,7 +20,13 @@ d_rot = 80
 
 
 class MyDeficitModel(WakeDeficitModel):
+    """
+    A custom Py_Wake deficit model to calculate the Jensen Deficit model as
+    described in wake_model_new.py. This class is not called directly by the user
+    but rather it is called by the MyJensen class which inherits the Py_Wake super
+    classes for propegated models.
 
+    """
 
     def ct2a_madsen(self, ct, ct2ap=np.array([0.2460, 0.0586, 0.0883])):
         """
@@ -44,6 +50,9 @@ class MyDeficitModel(WakeDeficitModel):
         return k_ilk
 
     def _calc_layout_terms(self, D_src_il, wake_radius_ijl, dw_ijlk, cw_ijlk, **kwargs):
+        """
+        Calculates the numerator and denominator terms for the Jensen model.
+        """
 
         WS_ref_ilk = kwargs[self.WS_key]
         R_src_il = D_src_il / 2
@@ -55,12 +64,19 @@ class MyDeficitModel(WakeDeficitModel):
         self.layout_factor_ijlk = WS_ref_ilk[:, na] * (in_wake_ijlk / term_denominator_ijlk)
 
     def calc_deficit(self, ct_ilk, **kwargs):
+        """
+        Calculates the deficit
+        """
         if not self.deficit_initalized:
             self._calc_layout_terms(ct_ilk=ct_ilk, **kwargs)
         term_numerator_ilk = 2. * self.ct2a(ct_ilk)
         return term_numerator_ilk[:, na] * self.layout_factor_ijlk
 
     def wake_radius(self, D_src_il, dw_ijlk, **kwargs):
+        """
+        Calculates the radius of the deficit.
+        """
+
         if 'TI_eff_ilk' not in kwargs:
             kwargs['TI_eff_ilk'] = 0.0
             kwargs['TI_ilk'] = 0.0
@@ -70,6 +86,11 @@ class MyDeficitModel(WakeDeficitModel):
 
 
 class MyJensen(PropagateDownwind, DeprecatedModel):
+    """
+    A child class of Py_Wake classes PropagateDownwind and DeprecatedModel. This
+    class calls our custom MyDeficitModel class and inherits the propegation
+    model required for Deficit classes.
+    """
 
     def ct2a_madsen(self, ct, ct2ap=np.array([0.2460, 0.0586, 0.0883])):
         """
@@ -105,9 +126,12 @@ class MyJensen(PropagateDownwind, DeprecatedModel):
                                    superpositionModel=superpositionModel,
                                    deflectionModel=deflectionModel,
                                    turbulenceModel=turbulenceModel)
-        # DeprecatedModel.__init__(self, 'py_wake.literature.noj.Jensen_1983')
 
     def calculate_new_wake_model(self, site, windTurbines, xt, yt, x, y, hub_height, ws):
+        """
+        Passes in the parameters from wake_model_new.py and runs the calculation.
+        Returns an array containing the wind speed at each grid point.
+        """
 
         wake_model = MyJensen(site, windTurbines, ct2a=self.ct2a_madsen, superpositionModel=SquaredSum())
         sim_res = wake_model(x=xt, y=yt, wd=[270], ws=[ws])
@@ -123,6 +147,7 @@ class MyJensen(PropagateDownwind, DeprecatedModel):
         ax.set_ylabel('feature_y')
 
         plt.show()
+        print(WS_eff_xy.values)
         return WS_eff_xy.values
 
 

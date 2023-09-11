@@ -211,7 +211,7 @@ def calculate_flow_field(
 
     deficit_model = MyJensen(my_site, my_turbines[0])
     u_eff = deficit_model.calculate_new_wake_model(
-        my_site, my_turbines[0], xt[0], xt[1],np.linspace(
+        my_site, my_turbines[0], xt[0], xt[1], np.linspace(
             0,farm_size, grid_resolution), np.linspace(
             0,farm_size, grid_resolution), d_rot, u_inf)
 
